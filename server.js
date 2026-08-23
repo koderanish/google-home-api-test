@@ -3,13 +3,15 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- 1. Dialogflow Intent Route (Your Voice Actions Test) ---
+// --- 1. Dialogflow Intent & SmartHome Routing Endpoint ---
 app.post('/', async (req, res) => {
     try {
         const intentName = req.body.queryResult?.intent?.displayName;
         
-        // Google Smart Home Intent Handshake Check
+        // Extract Google Smart Home Intents if they exist
         const smartHomeIntent = req.body.inputs?.[0]?.intent;
+
+        // A. Handle Google Smart Home SYNC Handshake
         if (smartHomeIntent === 'action.devices.SYNC') {
             return res.json({
                 requestId: req.body.requestId,
@@ -26,7 +28,22 @@ app.post('/', async (req, res) => {
             });
         }
 
-        // Standard Dialogflow text intent matching
+        // B. Handle Google Smart Home QUERY (Fixes the Offline Error)
+        if (smartHomeIntent === 'action.devices.QUERY') {
+            return res.json({
+                requestId: req.body.requestId,
+                payload: {
+                    devices: {
+                        "instiflow_voice_sensor": {
+                            "online": true,
+                            "status": "SUCCESS"
+                        }
+                    }
+                }
+            });
+        }
+
+        // C. Standard Conversational Dialogflow Text Intent Matching
         let responseText = "Sorry, I couldn't understand that.";
         if (intentName === 'get_attendance') {
             const schoolAttendanceRate = 94;
